@@ -4,6 +4,7 @@ const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    role: { type: String, enum: ["student", "admin"], default: "student" },
     usn: { type: String, default: "" }, // Make sure unique: true is NOT here
     phone: { type: String, default: "" },
     imageUrl: { type: String, default: "" } 

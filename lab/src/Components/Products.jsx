@@ -42,7 +42,6 @@ export default function Products({ user, currentTab, setActiveTab, cart, setCart
     const [category, setCategory] = useState("All");
     const [sort, setSort] = useState("");
 
-    const [formData, setFormData] = useState({ name: "", description: "", price: "", category: "", imageUrl: "" });
     const categories = ["All", "Stationery", "Books", "Clothing", "Accessories", "Electronics"];
 
     const PORT = 5002; // PORT is safely set to 5002
@@ -50,7 +49,6 @@ export default function Products({ user, currentTab, setActiveTab, cart, setCart
     useEffect(() => {
         if (currentTab === "products") setView("grid");
         if (currentTab === "cart") setView("cart");
-        if (currentTab === "add-product") setView("add");
         if (currentTab === "orders") {
             setView("orders");
             fetchOrdersHistory(); 
@@ -76,20 +74,6 @@ export default function Products({ user, currentTab, setActiveTab, cart, setCart
             const res = await fetch(`http://localhost:${PORT}/api/orders/${user.email}`);
             setOrdersHistory(await res.json());
         } catch (error) { console.error("Error fetching orders:", error); }
-    };
-
-    const handleAddProduct = async (e) => {
-        e.preventDefault();
-        try {
-            const res = await fetch(`http://localhost:${PORT}/api/products`, {
-                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData),
-            });
-            if (!res.ok) return alert("Error saving product");
-            alert("Product saved to MongoDB!");
-            setFormData({ name: "", description: "", price: "", category: "", imageUrl: "" });
-            setActiveTab("products"); 
-            fetchProducts();
-        } catch (err) { alert("Server error"); }
     };
 
     const addToCart = (product) => {
@@ -135,7 +119,6 @@ export default function Products({ user, currentTab, setActiveTab, cart, setCart
 
             {view === "grid" && <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">Student Store</h2>}
             {view === "cart" && <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">Your Shopping Cart</h2>}
-            {view === "add" && <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">Add New Product</h2>}
             {view === "orders" && <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">My Orders</h2>}
 
             {view === "grid" && (
@@ -235,17 +218,6 @@ export default function Products({ user, currentTab, setActiveTab, cart, setCart
                         </div>
                     </div>
                 </div>
-            )}
-
-            {view === "add" && (
-                <form onSubmit={handleAddProduct} className="space-y-4 max-w-lg mx-auto bg-gray-50 p-6 rounded-xl border">
-                    <input type="text" placeholder="Product Name" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border rounded-lg px-4 py-2" />
-                    <input type="number" placeholder="Price (₹)" required value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} className="w-full border rounded-lg px-4 py-2" />
-                    <select required value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full border rounded-lg px-4 py-2"><option value="">Select Category</option>{categories.filter(c => c !== "All").map(cat => <option key={cat}>{cat}</option>)}</select>
-                    <input type="url" placeholder="Image URL" value={formData.imageUrl} onChange={(e) => setFormData({...formData, imageUrl: e.target.value})} className="w-full border rounded-lg px-4 py-2" />
-                    <textarea placeholder="Description" required value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full border rounded-lg px-4 py-2" rows="3"></textarea>
-                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700">Save to Database</button>
-                </form>
             )}
 
             {view === "details" && selectedProduct && (

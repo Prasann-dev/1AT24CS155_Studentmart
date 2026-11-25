@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import AdminOrders from "./AdminOrders";
+import AdminSupport from "./AdminSupport";
 
 export default function AdminDashboard({ user, token, onLogout }) {
     const [activeTab, setActiveTab] = useState("overview"); // "overview" | "products" | "add-product"
@@ -42,6 +44,11 @@ export default function AdminDashboard({ user, token, onLogout }) {
 
     // Delete Confirmation state
     const [deletingProduct, setDeletingProduct] = useState(null);
+    const [openTicketsCount, setOpenTicketsCount] = useState(0);
+
+    const handleSupportStatsChange = useCallback((s) => {
+        setOpenTicketsCount(s?.open || 0);
+    }, []);
 
     const categories = ["Stationery", "Books", "Clothing", "Accessories", "Electronics", "General"];
     const PORT = 5002;
@@ -51,56 +58,62 @@ export default function AdminDashboard({ user, token, onLogout }) {
         setTimeout(() => setNotification(null), 4000);
     };
 
-    const getAuthHeaders = () => {
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    const getAuthHeaders = useCallback(() => {
         const storedToken = token || localStorage.getItem("token");
         return {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${storedToken}`
         };
-    };
+    }, [token]);
 
     useEffect(() => {
-        fetchStats();
-        fetchProducts();
-    }, []);
-
-    useEffect(() => {
-        fetchProducts();
-    }, [search, categoryFilter, sortOption]);
-
-    const fetchStats = async () => {
-        try {
-            const res = await fetch(`http://localhost:${PORT}/api/products/stats`, {
-                headers: getAuthHeaders()
+        let active = true;
+        fetch(`http://localhost:${PORT}/api/products/stats`, {
+            headers: getAuthHeaders()
+        })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (active && data) setStats(data);
+            })
+            .catch((error) => {
+                console.error("Failed to fetch admin stats:", error);
             });
-            if (res.ok) {
-                const data = await res.json();
-                setStats(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch admin stats:", error);
-        }
-    };
 
-    const fetchProducts = async () => {
-        try {
-            setLoading(true);
-            let url = `http://localhost:${PORT}/api/products?`;
-            if (search) url += `search=${encodeURIComponent(search)}&`;
-            if (categoryFilter && categoryFilter !== "All") url += `category=${encodeURIComponent(categoryFilter)}&`;
-            if (sortOption) url += `sort=${encodeURIComponent(sortOption)}&`;
-            
-            const res = await fetch(url);
-            if (res.ok) {
-                const data = await res.json();
-                setProducts(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch products:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        fetch(`http://localhost:${PORT}/api/support/admin/all`, {
+            headers: getAuthHeaders()
+        })
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (active && data?.stats) setOpenTicketsCount(data.stats.open || 0);
+            })
+            .catch((error) => {
+                console.error("Failed to fetch support stats:", error);
+            });
+        return () => { active = false; };
+    }, [getAuthHeaders, refreshKey]);
+
+    useEffect(() => {
+        let active = true;
+        let url = `http://localhost:${PORT}/api/products?`;
+        if (search) url += `search=${encodeURIComponent(search)}&`;
+        if (categoryFilter && categoryFilter !== "All") url += `category=${encodeURIComponent(categoryFilter)}&`;
+        if (sortOption) url += `sort=${encodeURIComponent(sortOption)}&`;
+
+        fetch(url)
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+                if (active && data) setProducts(data);
+            })
+            .catch((error) => {
+                console.error("Failed to fetch products:", error);
+            })
+            .finally(() => {
+                if (active) setLoading(false);
+            });
+        return () => { active = false; };
+    }, [search, categoryFilter, sortOption, refreshKey]);
 
     const handleAddProduct = async (e) => {
         e.preventDefault();
@@ -122,13 +135,13 @@ export default function AdminDashboard({ user, token, onLogout }) {
                     stock: 10,
                     imageUrl: ""
                 });
-                fetchProducts();
-                fetchStats();
+                setRefreshKey((k) => k + 1);
                 setActiveTab("products");
             } else {
                 showNotify("error", data.message || "Failed to add product.");
             }
         } catch (error) {
+            console.error("Add product error:", error);
             showNotify("error", "Server connection error while adding product.");
         }
     };
@@ -160,12 +173,12 @@ export default function AdminDashboard({ user, token, onLogout }) {
             if (res.ok) {
                 showNotify("success", `Product "${editFormData.name}" updated successfully!`);
                 setEditingProduct(null);
-                fetchProducts();
-                fetchStats();
+                setRefreshKey((k) => k + 1);
             } else {
                 showNotify("error", data.message || "Failed to update product.");
             }
         } catch (error) {
+            console.error("Update product error:", error);
             showNotify("error", "Server error while updating product.");
         }
     };
@@ -183,12 +196,12 @@ export default function AdminDashboard({ user, token, onLogout }) {
             if (res.ok) {
                 showNotify("success", `Product "${deletingProduct.name}" removed from store.`);
                 setDeletingProduct(null);
-                fetchProducts();
-                fetchStats();
+                setRefreshKey((k) => k + 1);
             } else {
                 showNotify("error", data.message || "Failed to delete product.");
             }
         } catch (error) {
+            console.error("Delete product error:", error);
             showNotify("error", "Server error while deleting product.");
         }
     };
@@ -203,19 +216,19 @@ export default function AdminDashboard({ user, token, onLogout }) {
     const totalCategoriesCount = stats.totalCategories || new Set(products.map(p => p.category)).size;
 
     return (
-        <div className="flex h-screen bg-[#f8fafc] text-gray-900 overflow-hidden font-sans">
+        <div className="flex h-screen bg-[#f6f1ea] text-[#131b26] overflow-hidden font-sans">
             {/* SIDEBAR NAVIGATION */}
-            <aside className="w-64 bg-white border-r border-gray-200/80 flex flex-col flex-shrink-0 z-20">
+            <aside className="w-64 bg-white border-r border-[#e8dfd3] flex flex-col flex-shrink-0 z-20">
                 {/* Brand Header */}
-                <div className="p-6 border-b border-gray-100 flex items-center gap-3">
-                    <div className="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-md shadow-blue-500/25 shrink-0">
+                <div className="p-6 border-b border-[#f0e9df] flex items-center gap-3">
+                    <div className="w-11 h-11 bg-[#1d5e4b] rounded-2xl flex items-center justify-center text-[#f1dec9] shadow-md shadow-[#1d5e4b]/25 shrink-0">
                         <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                         </svg>
                     </div>
                     <div>
-                        <h2 className="text-lg font-extrabold text-gray-900 tracking-tight">StudentMart</h2>
-                        <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">
+                        <h2 className="text-lg font-extrabold text-[#131b26] tracking-tight">StudentMart</h2>
+                        <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-[#1d5e4b] bg-[#eef5f2] px-2 py-0.5 rounded-full border border-[#d2e4dc]">
                             ADMIN PORTAL
                         </span>
                     </div>
@@ -232,8 +245,8 @@ export default function AdminDashboard({ user, token, onLogout }) {
                         onClick={() => setActiveTab("overview")}
                         className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
                             activeTab === "overview"
-                                ? "bg-blue-50 text-blue-600 shadow-sm border border-blue-100/50"
-                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                ? "bg-[#eef5f2] text-[#1d5e4b] shadow-sm border border-[#d2e4dc]"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-[#f6f1ea]/70"
                         }`}
                     >
                         <svg className="w-5 h-5 text-current" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -247,8 +260,8 @@ export default function AdminDashboard({ user, token, onLogout }) {
                         onClick={() => setActiveTab("products")}
                         className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
                             activeTab === "products"
-                                ? "bg-blue-50 text-blue-600 shadow-sm border border-blue-100/50"
-                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                ? "bg-[#eef5f2] text-[#1d5e4b] shadow-sm border border-[#d2e4dc]"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-[#f6f1ea]/70"
                         }`}
                     >
                         <div className="flex items-center gap-3.5">
@@ -257,7 +270,7 @@ export default function AdminDashboard({ user, token, onLogout }) {
                             </svg>
                             <span>Products Catalog</span>
                         </div>
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold">
+                        <span className="text-xs bg-[#f6f1ea] text-gray-700 px-2 py-0.5 rounded-full font-bold">
                             {products.length}
                         </span>
                     </button>
@@ -267,14 +280,51 @@ export default function AdminDashboard({ user, token, onLogout }) {
                         onClick={() => setActiveTab("add-product")}
                         className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
                             activeTab === "add-product"
-                                ? "bg-blue-50 text-blue-600 shadow-sm border border-blue-100/50"
-                                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                ? "bg-[#eef5f2] text-[#1d5e4b] shadow-sm border border-[#d2e4dc]"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-[#f6f1ea]/70"
                         }`}
                     >
                         <svg className="w-5 h-5 text-current" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/>
                         </svg>
                         <span>Add New Product</span>
+                    </button>
+
+                    {/* Customer Orders */}
+                    <button
+                        onClick={() => setActiveTab("orders")}
+                        className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
+                            activeTab === "orders"
+                                ? "bg-[#eef5f2] text-[#1d5e4b] shadow-sm border border-[#d2e4dc]"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-[#f6f1ea]/70"
+                        }`}
+                    >
+                        <svg className="w-5 h-5 text-current" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                        <span>Customer Orders</span>
+                    </button>
+
+                    {/* Support Tickets */}
+                    <button
+                        onClick={() => setActiveTab("support")}
+                        className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition-all ${
+                            activeTab === "support"
+                                ? "bg-[#eef5f2] text-[#1d5e4b] shadow-sm border border-[#d2e4dc]"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-[#f6f1ea]/70"
+                        }`}
+                    >
+                        <div className="flex items-center gap-3.5">
+                            <svg className="w-5 h-5 text-current" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+                            </svg>
+                            <span>Support Tickets</span>
+                        </div>
+                        {openTicketsCount > 0 && (
+                            <span className="text-xs bg-rose-500 text-white px-2 py-0.5 rounded-full font-bold">
+                                {openTicketsCount}
+                            </span>
+                        )}
                     </button>
                 </nav>
 
@@ -303,7 +353,7 @@ export default function AdminDashboard({ user, token, onLogout }) {
             </aside>
 
             {/* MAIN CONTENT AREA */}
-            <main className="flex-1 overflow-y-auto bg-[#f8fafc] relative">
+            <main className="flex-1 overflow-y-auto bg-[#f6f1ea] relative">
                 {/* Top Notification Toast */}
                 {notification && (
                     <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-xl border text-sm font-semibold transition-all ${
@@ -324,6 +374,8 @@ export default function AdminDashboard({ user, token, onLogout }) {
                                 {activeTab === "overview" && "Dashboard Overview"}
                                 {activeTab === "products" && "Product Management"}
                                 {activeTab === "add-product" && "Add New Store Product"}
+                                {activeTab === "orders" && "Customer Orders"}
+                                {activeTab === "support" && "Support Tickets"}
                             </h1>
                             <p className="text-gray-500 text-sm mt-1">
                                 Secure store inventory and product catalog management
@@ -332,7 +384,7 @@ export default function AdminDashboard({ user, token, onLogout }) {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setActiveTab("add-product")}
-                                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm shadow-sm transition"
+                                className="flex items-center gap-2 bg-[#1d5e4b] hover:bg-[#174c3c] text-white px-5 py-2.5 rounded-xl font-medium text-sm shadow-sm transition"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                     <path d="M12 5v14M5 12h14"/>
@@ -699,7 +751,7 @@ export default function AdminDashboard({ user, token, onLogout }) {
                                 <div className="flex gap-4 pt-4 border-t border-gray-100">
                                     <button
                                         type="submit"
-                                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-sm transition text-sm"
+                                        className="flex-1 bg-[#1d5e4b] hover:bg-[#174c3c] text-white font-bold py-3 rounded-xl shadow-sm transition text-sm"
                                     >
                                         Save Product to Database
                                     </button>
@@ -713,6 +765,16 @@ export default function AdminDashboard({ user, token, onLogout }) {
                                 </div>
                             </form>
                         </div>
+                    )}
+                    {/* VIEW 4: CUSTOMER ORDERS */}
+                    {activeTab === "orders" && <AdminOrders token={token} />}
+
+                    {/* VIEW 5: SUPPORT TICKETS */}
+                    {activeTab === "support" && (
+                        <AdminSupport
+                            token={token}
+                            onStatsChange={handleSupportStatsChange}
+                        />
                     )}
                 </div>
             </main>
@@ -803,7 +865,7 @@ export default function AdminDashboard({ user, token, onLogout }) {
                             <div className="flex gap-3 pt-3 border-t border-gray-100">
                                 <button
                                     type="submit"
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
+                                    className="flex-1 bg-[#1d5e4b] hover:bg-[#174c3c] text-white font-bold py-2.5 rounded-xl transition text-sm shadow-sm"
                                 >
                                     Save Changes
                                 </button>

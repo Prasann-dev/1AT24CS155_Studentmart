@@ -7,7 +7,8 @@ const userSchema = new mongoose.Schema({
     role: { type: String, enum: ["student", "admin"], default: "student" },
     usn: { type: String, default: "" }, // Make sure unique: true is NOT here
     phone: { type: String, default: "" },
-    imageUrl: { type: String, default: "" } 
+    imageUrl: { type: String, default: "" },
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }]
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

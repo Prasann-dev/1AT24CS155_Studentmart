@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 
 export default function Profile({ user, setUser }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [prevUser, setPrevUser] = useState(user);
     
     // Uses the image from the user prop, or localStorage, or a default placeholder
     const [profileImage, setProfileImage] = useState(() => {
@@ -17,7 +18,8 @@ export default function Profile({ user, setUser }) {
     });
 
     // SYNC: Whenever the `user` prop updates (like when switching back to this tab), update the form & image
-    useEffect(() => {
+    if (user !== prevUser) {
+        setPrevUser(user);
         if (user) {
             setFormData({
                 name: user.name || "",
@@ -30,7 +32,7 @@ export default function Profile({ user, setUser }) {
                 setProfileImage(user.imageUrl);
             }
         }
-    }, [user]);
+    }
 
     const fileInputRef = useRef(null);
 
@@ -117,12 +119,12 @@ export default function Profile({ user, setUser }) {
     };
 
     return (
-        <div className="bg-white p-8 rounded-3xl w-full max-w-4xl mx-auto shadow-[0_2px_20px_rgba(0,0,0,0.04)] border border-gray-50 font-sans relative">
+        <div className="bg-white p-8 rounded-3xl w-full max-w-4xl mx-auto shadow-xs border border-[#e8dfd3] font-sans relative">
             
             {!isEditing && (
                 <button 
                     onClick={() => setIsEditing(true)}
-                    className="absolute top-8 right-8 p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl transition"
+                    className="absolute top-8 right-8 p-2.5 bg-[#eef5f2] text-[#1d5e4b] hover:bg-[#dfeee6] rounded-xl transition"
                     title="Edit Profile"
                 >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -135,7 +137,7 @@ export default function Profile({ user, setUser }) {
                 
                 {/* LEFT SIDE: Avatar & Image Upload */}
                 <div className="relative group shrink-0">
-                    <div className="w-48 h-48 rounded-full p-2 bg-gradient-to-br from-blue-100 to-indigo-100">
+                    <div className="w-48 h-48 rounded-full p-2 bg-gradient-to-br from-[#f1dec9] to-[#dceae4]">
                         <img 
                             src={profileImage} 
                             alt="Profile" 
@@ -145,7 +147,7 @@ export default function Profile({ user, setUser }) {
                     
                     <button 
                         onClick={() => fileInputRef.current.click()}
-                        className="absolute bottom-2 right-2 p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition hover:scale-105"
+                        className="absolute bottom-2 right-2 p-3 bg-[#1d5e4b] text-white rounded-full shadow-lg hover:bg-[#174c3c] transition hover:scale-105"
                         title="Change Profile Picture"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -221,8 +223,8 @@ export default function Profile({ user, setUser }) {
                             </div>
 
                             <div className="flex gap-3 pt-4">
-                                <button type="submit" className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition">Save Changes</button>
-                                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition">Cancel</button>
+                                <button type="submit" className="flex-1 bg-[#1d5e4b] text-white font-bold py-3 rounded-xl hover:bg-[#174c3c] transition">Save Changes</button>
+                                <button type="button" onClick={() => setIsEditing(false)} className="flex-1 bg-[#f6f1ea] text-[#131b26] font-bold py-3 rounded-xl hover:bg-[#ebe2d5] transition">Cancel</button>
                             </div>
                         </form>
                     )}

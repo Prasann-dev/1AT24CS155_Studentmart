@@ -22,14 +22,14 @@ export default function Register({ onSwitch }) {
             if (response.ok) {
                 setTimeout(() => onSwitch(), 1500); 
             }
-        } catch (error) {
+        } catch {
             setIsSuccess(false);
             setMessage("Server connection failed");
         }
     };
 
     return (
-        <div className="w-full p-8 space-y-5 bg-white/10 backdrop-blur-lg rounded-2xl border border-white/10 shadow-2xl">
+        <div className="w-full p-7 space-y-5 bg-[#1a222c]/45 backdrop-blur-md rounded-2xl border border-white/15 shadow-[0_24px_64px_rgba(0,0,0,0.65)]">
             <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-white">Create Account</h2>
                 <p className="mt-1 text-xs text-gray-300">Join StudentMart today</p>
@@ -49,7 +49,7 @@ export default function Register({ onSwitch }) {
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full bg-white/5 border-b-2 border-gray-400/50 text-white px-3 py-1.5 outline-none focus:border-blue-500 transition-colors text-sm"
+                        className="auth-dark-input w-full bg-[#2b3139]/80 border border-white/15 rounded-lg text-white px-3.5 py-2 outline-none focus:border-[#1a745c] transition-colors text-sm placeholder-slate-400"
                         placeholder="e.g. John Doe"
                         required
                     />
@@ -65,7 +65,7 @@ export default function Register({ onSwitch }) {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-white/5 border-b-2 border-gray-400/50 text-white px-3 py-1.5 outline-none focus:border-blue-500 transition-colors text-sm"
+                        className="auth-dark-input w-full bg-[#2b3139]/80 border border-white/15 rounded-lg text-white px-3.5 py-2 outline-none focus:border-[#1a745c] transition-colors text-sm placeholder-slate-400"
                         placeholder="name@example.com"
                         required
                     />
@@ -81,7 +81,7 @@ export default function Register({ onSwitch }) {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-white/5 border-b-2 border-gray-400/50 text-white px-3 py-1.5 outline-none focus:border-blue-500 transition-colors text-sm"
+                        className="auth-dark-input w-full bg-[#2b3139]/80 border border-white/15 rounded-lg text-white px-3.5 py-2 outline-none focus:border-[#1a745c] transition-colors text-sm placeholder-slate-400"
                         placeholder="••••••••"
                         required
                     />
@@ -89,15 +89,15 @@ export default function Register({ onSwitch }) {
 
                 <button
                     type="submit"
-                    className="w-full flex items-center justify-center py-2.5 px-4 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition-all mt-4 text-sm"
+                    className="w-full flex items-center justify-center py-2.5 px-4 bg-[#145a47] hover:bg-[#196f58] rounded-lg text-white font-semibold transition-all mt-4 text-sm shadow-lg shadow-[#145a47]/30"
                 >
                     Sign Up
                     <svg className="ml-2 h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </button>
             </form>
             
-            <p className="text-center text-xs text-gray-400 mt-4 pt-4 border-t border-white/10">
-                Already have an account? <span onClick={onSwitch} className="font-semibold text-blue-400 hover:text-blue-300 transition cursor-pointer">Log In</span>
+            <p className="text-center text-xs text-slate-400 mt-4 pt-4 border-t border-white/10">
+                Already have an account? <span onClick={onSwitch} className="font-semibold text-[#5596d0] hover:text-[#7bb5e8] transition cursor-pointer">Log In</span>
             </p>
         </div>
     );

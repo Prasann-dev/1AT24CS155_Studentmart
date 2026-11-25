@@ -13,11 +13,17 @@ app.use(express.urlencoded({ limit: "10mb", extended: true }));
 const authRouter = require("./Router/authRouter");
 const productRouter = require("./Router/productRouter"); 
 const orderRouter = require("./Router/orderRouter");
+const addressRouter = require("./Router/addressRouter");
+const wishlistRouter = require("./Router/wishlistRouter");
+const supportRouter = require("./Router/supportRouter");
 
 // Use routers
 app.use("/api/auth", authRouter);
 app.use("/api/products", productRouter);
 app.use("/api/orders", orderRouter);
+app.use("/api/addresses", addressRouter);
+app.use("/api/wishlist", wishlistRouter);
+app.use("/api/support", supportRouter);
 
 app.get("/", (req, res) => {
     res.json({

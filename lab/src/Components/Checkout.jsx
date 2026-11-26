@@ -31,10 +31,13 @@ export default function Checkout({
         state: "",
         pincode: "",
         alternatePhone: "",
+        location: null,
         isDefault: false
     });
     const [addressErrors, setAddressErrors] = useState({});
     const [isSavingAddress, setIsSavingAddress] = useState(false);
+    const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+    const [locationStatus, setLocationStatus] = useState("");
 
     // Payment & Promo state
     const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery");
@@ -228,14 +231,87 @@ export default function Checkout({
                 state: "",
                 pincode: "",
                 alternatePhone: "",
+                location: null,
                 isDefault: false
             });
+            setLocationStatus("");
         } catch (error) {
             console.error("Save address error:", error);
             setCheckoutError("Failed to save address. Please check server connection.");
         } finally {
             setIsSavingAddress(false);
         }
+    };
+
+    // Detect Live GPS Location & Auto-fill Address
+    const handleUseLiveLocation = () => {
+        if (!navigator.geolocation) {
+            setLocationStatus("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        setIsDetectingLocation(true);
+        setLocationStatus("Requesting GPS permission & detecting your live location...");
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude, accuracy } = position.coords;
+                const liveLoc = {
+                    latitude: Number(latitude.toFixed(6)),
+                    longitude: Number(longitude.toFixed(6)),
+                    accuracy: Math.round(accuracy || 0),
+                    mapUrl: `https://www.google.com/maps?q=${latitude},${longitude}`
+                };
+
+                try {
+                    const geoRes = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`,
+                        { headers: { Accept: "application/json" } }
+                    );
+                    if (geoRes.ok) {
+                        const geoData = await geoRes.json();
+                        const addr = geoData.address || {};
+                        const detectedHouse = [addr.house_number, addr.building, addr.amenity].filter(Boolean).join(", ");
+                        const detectedStreet = [addr.road, addr.suburb, addr.neighbourhood, addr.residential].filter(Boolean).join(", ");
+                        const detectedCity = addr.city || addr.town || addr.village || addr.county || "";
+                        const detectedState = addr.state || "";
+                        const detectedPin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+
+                        setAddressForm((prev) => ({
+                            ...prev,
+                            houseNo: prev.houseNo.trim() || detectedHouse || "Current Location",
+                            street: prev.street.trim() || detectedStreet || geoData.display_name?.split(",").slice(0, 2).join(", ") || "",
+                            landmark: prev.landmark.trim() || addr.neighbourhood || addr.suburb || "",
+                            city: prev.city.trim() || detectedCity,
+                            state: prev.state.trim() || detectedState,
+                            pincode: prev.pincode.trim() || detectedPin,
+                            location: liveLoc
+                        }));
+                        setAddressErrors({});
+                        setLocationStatus(`Live location attached (${liveLoc.latitude}, ${liveLoc.longitude}). Review or edit fields below.`);
+                    } else {
+                        setAddressForm((prev) => ({ ...prev, location: liveLoc }));
+                        setLocationStatus(`Live GPS coordinates captured (${liveLoc.latitude}, ${liveLoc.longitude}). Fill in your street/building details.`);
+                    }
+                } catch {
+                    setAddressForm((prev) => ({ ...prev, location: liveLoc }));
+                    setLocationStatus(`Live GPS coordinates captured (${liveLoc.latitude}, ${liveLoc.longitude}). Fill in your street/building details.`);
+                } finally {
+                    setIsDetectingLocation(false);
+                }
+            },
+            (err) => {
+                setIsDetectingLocation(false);
+                if (err.code === err.PERMISSION_DENIED) {
+                    setLocationStatus("Location access denied. Please allow location permission in your browser or enter your address manually.");
+                } else if (err.code === err.TIMEOUT) {
+                    setLocationStatus("Location request timed out. Please try again or enter your address manually.");
+                } else {
+                    setLocationStatus("Unable to detect live location. Please enter your address manually.");
+                }
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
     };
 
     // Edit address
@@ -252,8 +328,10 @@ export default function Checkout({
             state: addr.state,
             pincode: addr.pincode,
             alternatePhone: addr.alternatePhone || "",
+            location: addr.location && addr.location.latitude !== null ? addr.location : null,
             isDefault: addr.isDefault || false
         });
+        setLocationStatus("");
         setAddressErrors({});
         setShowAddressForm(true);
     };
@@ -502,12 +580,14 @@ export default function Checkout({
                                                 state: "",
                                                 pincode: "",
                                                 alternatePhone: "",
+                                                location: null,
                                                 isDefault: addresses.length === 0
                                             });
+                                            setLocationStatus("");
                                             setAddressErrors({});
                                             setShowAddressForm(true);
                                         }}
-                                        className="bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold px-4 py-2.5 rounded-xl text-xs transition border border-blue-200 flex items-center gap-1.5 self-start sm:self-auto"
+                                        className="bg-[#eef5f2] hover:bg-[#dfeee6] text-[#1d5e4b] font-bold px-4 py-2.5 rounded-xl text-xs transition border border-[#d2e4dc] flex items-center gap-1.5 self-start sm:self-auto"
                                     >
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                             <path d="M12 5v14M5 12h14"/>
@@ -519,24 +599,74 @@ export default function Checkout({
 
                             {/* Address Form (Add / Edit) */}
                             {showAddressForm && (
-                                <form onSubmit={handleSaveAddress} className="mt-6 bg-blue-50/40 p-6 rounded-2xl border border-blue-100 space-y-4">
-                                    <div className="flex items-center justify-between border-b border-blue-100 pb-3">
-                                        <h3 className="font-bold text-gray-900 text-sm">
+                                <form onSubmit={handleSaveAddress} className="mt-6 bg-[#f6f1ea]/70 p-6 rounded-2xl border border-[#e8dfd3] space-y-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8dfd3] pb-3">
+                                        <h3 className="font-bold text-[#131b26] text-sm">
                                             {editingAddressId ? "Edit Delivery Address" : "Add New Delivery Address"}
                                         </h3>
-                                        {addresses.length > 0 && (
+                                        <div className="flex items-center gap-3">
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setShowAddressForm(false);
-                                                    setEditingAddressId(null);
-                                                }}
-                                                className="text-gray-400 hover:text-gray-600 text-xs font-semibold"
+                                                onClick={handleUseLiveLocation}
+                                                disabled={isDetectingLocation}
+                                                className="inline-flex items-center gap-1.5 bg-[#1d5e4b] hover:bg-[#174c3c] text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shadow-xs disabled:opacity-60"
                                             >
-                                                ✕ Cancel
+                                                <svg className={`w-3.5 h-3.5 ${isDetectingLocation ? "animate-pulse" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                                                    <circle cx="12" cy="12" r="3" />
+                                                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                                                    <circle cx="12" cy="12" r="7" />
+                                                </svg>
+                                                <span>{isDetectingLocation ? "Detecting..." : "Use Live Location"}</span>
                                             </button>
-                                        )}
+                                            {addresses.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowAddressForm(false);
+                                                        setEditingAddressId(null);
+                                                        setLocationStatus("");
+                                                    }}
+                                                    className="text-gray-500 hover:text-gray-700 text-xs font-semibold"
+                                                >
+                                                    ✕ Cancel
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    {(locationStatus || addressForm.location?.latitude) && (
+                                        <div className={`p-3 rounded-xl border text-xs flex flex-wrap items-center justify-between gap-2 ${
+                                            addressForm.location?.latitude
+                                                ? "bg-[#eef5f2] border-[#cde1d8] text-[#1d5e4b]"
+                                                : "bg-amber-50 border-amber-200 text-amber-800"
+                                        }`}>
+                                            <span className="font-semibold">
+                                                {locationStatus || `Live GPS pin attached (${addressForm.location.latitude}, ${addressForm.location.longitude})`}
+                                            </span>
+                                            {addressForm.location?.latitude && (
+                                                <div className="flex items-center gap-3">
+                                                    <a
+                                                        href={addressForm.location.mapUrl || `https://www.google.com/maps?q=${addressForm.location.latitude},${addressForm.location.longitude}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="font-bold underline"
+                                                    >
+                                                        View on Map ↗
+                                                    </a>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setAddressForm((prev) => ({ ...prev, location: null }));
+                                                            setLocationStatus("");
+                                                        }}
+                                                        className="text-rose-600 hover:underline font-bold"
+                                                    >
+                                                        Clear Pin
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
@@ -790,6 +920,20 @@ export default function Checkout({
                                                                 Phone: <span className="text-gray-800 font-semibold">{addr.mobile}</span>
                                                                 {addr.alternatePhone && ` | Alt: ${addr.alternatePhone}`}
                                                             </p>
+                                                            {addr.location?.latitude !== null && addr.location?.latitude !== undefined && (
+                                                                <div className="mt-2 inline-flex items-center gap-2 text-[11px] font-bold text-[#1d5e4b] bg-[#eef5f2] px-2.5 py-1 rounded-lg border border-[#d2e4dc]">
+                                                                    <span>📍 Live GPS Pin ({addr.location.latitude}, {addr.location.longitude})</span>
+                                                                    <a
+                                                                        href={addr.location.mapUrl || `https://www.google.com/maps?q=${addr.location.latitude},${addr.location.longitude}`}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="underline hover:text-[#131b26]"
+                                                                    >
+                                                                        Open Map ↗
+                                                                    </a>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
 

@@ -350,7 +350,15 @@ router.post("/", async (req, res) => {
                     city: address.city,
                     state: address.state,
                     pincode: address.pincode,
-                    alternatePhone: address.alternatePhone || ""
+                    alternatePhone: address.alternatePhone || "",
+                    location: address.location && address.location.latitude !== null
+                        ? {
+                            latitude: address.location.latitude,
+                            longitude: address.location.longitude,
+                            accuracy: address.location.accuracy,
+                            mapUrl: address.location.mapUrl || `https://www.google.com/maps?q=${address.location.latitude},${address.location.longitude}`
+                        }
+                        : undefined
                 },
                 items: orderItems,
                 totalItems,

@@ -7,6 +7,7 @@ import MyOrders from "./MyOrders";
 import Wishlist from "./Wishlist";
 import Support from "./Support";
 import Settings from "./Settings";
+import { downloadOrderInvoice } from "../utils/invoiceGenerator";
 
 const HERO_SLIDES = [
     {
@@ -128,10 +129,27 @@ function formatRelativeTime(dateValue) {
     return `${diffWeeks} week${diffWeeks === 1 ? "" : "s"} ago`;
 }
 
-function Dashboard({ user, token, onLogout, setUser }) {
-    const [activeTab, setActiveTab] = useState("home");
-    const [cart, setCart] = useState([]);
+function Dashboard({
+    user,
+    token,
+    onLogout,
+    setUser,
+    initialTab = "home",
+    sharedCart,
+    setSharedCart,
+    onOpenStorefront
+}) {
+    const [activeTab, setActiveTab] = useState(initialTab || "home");
+    const [prevInitialTab, setPrevInitialTab] = useState(initialTab);
+    const [localCart, setLocalCart] = useState([]);
+    const cart = sharedCart !== undefined ? sharedCart : localCart;
+    const setCart = setSharedCart || setLocalCart;
     const [latestOrder, setLatestOrder] = useState(null);
+
+    if (initialTab !== prevInitialTab) {
+        setPrevInitialTab(initialTab);
+        if (initialTab) setActiveTab(initialTab);
+    }
 
     // Live data synced from backend
     const [orders, setOrders] = useState([]);
@@ -660,8 +678,17 @@ function Dashboard({ user, token, onLogout, setUser }) {
                         )}
                     </div>
 
-                    {/* Right Controls: Bell + User Pill */}
+                    {/* Right Controls: Storefront link + Bell + User Pill */}
                     <div className="flex items-center gap-3">
+                        {onOpenStorefront && (
+                            <button
+                                type="button"
+                                onClick={onOpenStorefront}
+                                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#f6f1ea] hover:bg-[#ebe2d5] border border-[#e3d9cb] text-xs font-bold text-[#131b26] transition"
+                            >
+                                <span>← Storefront</span>
+                            </button>
+                        )}
                         {/* Notification Bell */}
                         <div className="relative">
                             <button
@@ -1075,13 +1102,15 @@ function Dashboard({ user, token, onLogout, setUser }) {
                                                     const extraCount = (order.items?.length || 0) - 1;
                                                     const status = order.orderStatus || "Placed";
                                                     return (
-                                                        <button
+                                                        <div
                                                             key={order._id || order.orderId}
-                                                            type="button"
-                                                            onClick={() => handleNavSelect("orders")}
-                                                            className="w-full py-3 flex items-center justify-between gap-3 hover:bg-slate-50/80 px-1.5 rounded-xl transition text-left"
+                                                            className="w-full py-3 flex items-center justify-between gap-3 hover:bg-slate-50/80 px-1.5 rounded-xl transition"
                                                         >
-                                                            <div className="flex items-center gap-3 min-w-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleNavSelect("orders")}
+                                                                className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                                                            >
                                                                 <img
                                                                     src={firstItem?.imageUrl || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=100&q=80"}
                                                                     alt={title}
@@ -1095,15 +1124,29 @@ function Dashboard({ user, token, onLogout, setUser }) {
                                                                         {formatShortDate(order.createdAt || order.date)}
                                                                     </p>
                                                                 </div>
-                                                            </div>
+                                                            </button>
 
                                                             <div className="flex items-center gap-2 shrink-0">
                                                                 <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getOrderStatusStyle(status)}`}>
                                                                     {status}
                                                                 </span>
-                                                                <span className="text-slate-400 text-sm">›</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        downloadOrderInvoice(order);
+                                                                        showToast("Invoice PDF downloaded");
+                                                                    }}
+                                                                    title="Download Invoice (PDF)"
+                                                                    className="w-7 h-7 rounded-lg bg-[#eef5f2] hover:bg-[#dfeee6] text-[#1d5e4b] border border-[#d2e4dc] flex items-center justify-center transition"
+                                                                >
+                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                                        <polyline points="7 10 12 15 17 10" />
+                                                                        <line x1="12" y1="15" x2="12" y2="3" />
+                                                                    </svg>
+                                                                </button>
                                                             </div>
-                                                        </button>
+                                                        </div>
                                                     );
                                                 })
                                             )}

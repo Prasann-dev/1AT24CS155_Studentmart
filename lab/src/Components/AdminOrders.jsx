@@ -709,6 +709,16 @@ export default function AdminOrders({ token }) {
                                             Recipient Phone: <strong>{selectedOrder.deliveryAddress?.mobile}</strong>
                                             {selectedOrder.deliveryAddress?.alternatePhone && ` | Alt: ${selectedOrder.deliveryAddress.alternatePhone}`}
                                         </p>
+                                        {selectedOrder.deliveryAddress?.location?.latitude !== null && selectedOrder.deliveryAddress?.location?.latitude !== undefined && (
+                                            <a
+                                                href={selectedOrder.deliveryAddress.location.mapUrl || `https://www.google.com/maps?q=${selectedOrder.deliveryAddress.location.latitude},${selectedOrder.deliveryAddress.location.longitude}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1d5e4b] bg-[#eef5f2] px-2.5 py-1 rounded-lg border border-[#d2e4dc] hover:underline"
+                                            >
+                                                📍 Live GPS Pin ({selectedOrder.deliveryAddress.location.latitude}, {selectedOrder.deliveryAddress.location.longitude}) ↗
+                                            </a>
+                                        )}
                                     </>
                                 ) : (
                                     <p className="text-gray-500">Legacy order — no delivery address stored.</p>

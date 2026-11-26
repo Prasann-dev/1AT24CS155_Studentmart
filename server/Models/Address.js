@@ -58,6 +58,12 @@ const addressSchema = new mongoose.Schema({
         trim: true,
         default: ""
     },
+    location: {
+        latitude: { type: Number, default: null },
+        longitude: { type: Number, default: null },
+        accuracy: { type: Number, default: null },
+        mapUrl: { type: String, default: "" }
+    },
     isDefault: {
         type: Boolean,
         default: false

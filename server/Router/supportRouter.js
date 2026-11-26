@@ -5,6 +5,37 @@ const { verifyToken, verifyAdmin } = require("../middleware/auth");
 
 const VALID_TICKET_STATUSES = ["Open", "In Review", "Resolved"];
 
+// POST: Public Contact Us inquiry (no login required, routes to Admin Support Tickets)
+router.post("/contact", async (req, res) => {
+    try {
+        const { name, email, subject, message } = req.body;
+        if (!name || !name.trim() || !email || !email.trim() || !subject || !subject.trim() || !message || !message.trim()) {
+            return res.status(400).json({ message: "Name, email, subject, and message are required." });
+        }
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email.trim())) {
+            return res.status(400).json({ message: "Please provide a valid email address." });
+        }
+
+        const ticket = await SupportTicket.create({
+            userEmail: email.trim().toLowerCase(),
+            userName: name.trim(),
+            source: "contact",
+            subject: subject.trim(),
+            category: "Other",
+            message: message.trim()
+        });
+
+        res.status(201).json({
+            message: "Thank you for contacting StudentMart! Our campus desk will reply via email.",
+            ticket
+        });
+    } catch (error) {
+        console.error("Contact inquiry error:", error);
+        res.status(500).json({ message: "Failed to send message", error: error.message });
+    }
+});
+
 // GET: Fetch current user's support tickets
 router.get("/my-tickets", verifyToken, async (req, res) => {
     try {

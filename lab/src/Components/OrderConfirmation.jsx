@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { downloadOrderInvoice } from "../utils/invoiceGenerator";
 
 export default function OrderConfirmation({ order, setActiveTab }) {
     const [copied, setCopied] = useState(false);
@@ -102,6 +103,18 @@ export default function OrderConfirmation({ order, setActiveTab }) {
                     <span>View & Track in My Orders</span>
                 </button>
                 <button
+                    type="button"
+                    onClick={() => downloadOrderInvoice(order)}
+                    className="flex-1 bg-[#f1dec9] hover:bg-[#e7ceb2] text-[#131b26] font-bold py-3.5 px-6 rounded-2xl border border-[#e3ccb0] transition shadow-sm flex items-center justify-center gap-2"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Download Invoice (PDF)</span>
+                </button>
+                <button
                     onClick={() => setActiveTab("products")}
                     className="flex-1 bg-white hover:bg-gray-50 text-gray-800 font-bold py-3.5 px-6 rounded-2xl border border-gray-200 transition shadow-sm flex items-center justify-center gap-2"
                 >
@@ -136,6 +149,16 @@ export default function OrderConfirmation({ order, setActiveTab }) {
                             Phone: <span className="text-gray-800 font-semibold">{address.mobile || order.customer?.phone}</span>
                             {address.alternatePhone && ` | Alt: ${address.alternatePhone}`}
                         </p>
+                        {address.location?.latitude !== null && address.location?.latitude !== undefined && (
+                            <a
+                                href={address.location.mapUrl || `https://www.google.com/maps?q=${address.location.latitude},${address.location.longitude}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1d5e4b] bg-[#eef5f2] px-2.5 py-1 rounded-lg border border-[#d2e4dc] hover:underline"
+                            >
+                                📍 Live Location Pin ({address.location.latitude}, {address.location.longitude}) ↗
+                            </a>
+                        )}
                     </div>
 
                     {/* Payment & Delivery Status */}

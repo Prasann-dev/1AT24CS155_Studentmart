@@ -19,6 +19,22 @@ const isValidEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || "").trim());
 };
 
+const sanitizeLocation = (loc) => {
+    if (!loc || typeof loc !== "object") return undefined;
+    const lat = Number(loc.latitude);
+    const lng = Number(loc.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return { latitude: null, longitude: null, accuracy: null, mapUrl: "" };
+    }
+    const acc = Number(loc.accuracy);
+    return {
+        latitude: lat,
+        longitude: lng,
+        accuracy: Number.isFinite(acc) ? Math.round(acc) : null,
+        mapUrl: `https://www.google.com/maps?q=${lat},${lng}`
+    };
+};
+
 // ==========================================
 // 1. GET: Fetch all saved addresses of user
 // ==========================================
@@ -48,6 +64,7 @@ router.post("/", verifyToken, async (req, res) => {
             state,
             pincode,
             alternatePhone,
+            location,
             isDefault
         } = req.body;
 
@@ -99,6 +116,7 @@ router.post("/", verifyToken, async (req, res) => {
             state: state.trim(),
             pincode: pincode.trim(),
             alternatePhone: (alternatePhone || "").trim(),
+            location: sanitizeLocation(location),
             isDefault: shouldBeDefault
         });
 
@@ -131,6 +149,7 @@ router.put("/:id", verifyToken, async (req, res) => {
             state,
             pincode,
             alternatePhone,
+            location,
             isDefault
         } = req.body;
 
@@ -162,6 +181,7 @@ router.put("/:id", verifyToken, async (req, res) => {
         if (state !== undefined) address.state = state.trim();
         if (pincode !== undefined) address.pincode = pincode.trim();
         if (alternatePhone !== undefined) address.alternatePhone = alternatePhone.trim();
+        if (location !== undefined) address.location = sanitizeLocation(location);
 
         const updated = await address.save();
         res.json(updated);

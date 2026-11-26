@@ -34,7 +34,13 @@ const orderSchema = new mongoose.Schema({
         city: String,
         state: String,
         pincode: String,
-        alternatePhone: String
+        alternatePhone: String,
+        location: {
+            latitude: Number,
+            longitude: Number,
+            accuracy: Number,
+            mapUrl: String
+        }
     },
     // Legacy fields preserved for backward compatibility
     invoiceNo: String,

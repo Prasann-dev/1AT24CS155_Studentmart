@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { downloadOrderInvoice } from "../utils/invoiceGenerator";
 
 // Status progression order for the tracking timeline
 const TIMELINE_STEPS = [
@@ -414,7 +415,7 @@ export default function MyOrders({ token, setActiveTab }) {
                                             {order.deliveryAddress?.city && ` (${order.deliveryAddress.city})`} · Payment via <strong className="text-gray-800">{order.paymentMethod || "COD"}</strong>
                                         </div>
 
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex flex-wrap items-center gap-3">
                                             {canCancel && (
                                                 <button
                                                     onClick={() => {
@@ -427,8 +428,20 @@ export default function MyOrders({ token, setActiveTab }) {
                                                 </button>
                                             )}
                                             <button
+                                                type="button"
+                                                onClick={() => downloadOrderInvoice(order)}
+                                                className="inline-flex items-center gap-1.5 bg-[#eef5f2] hover:bg-[#dfeee6] text-[#1d5e4b] font-bold px-3 py-1.5 rounded-xl border border-[#d2e4dc] transition"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                    <polyline points="7 10 12 15 17 10" />
+                                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                                </svg>
+                                                <span>Download Invoice</span>
+                                            </button>
+                                            <button
                                                 onClick={() => setSelectedOrder(order)}
-                                                className="text-blue-600 hover:text-blue-800 font-bold"
+                                                className="text-[#1d5e4b] hover:text-[#131b26] font-bold"
                                             >
                                                 View Full Receipt →
                                             </button>
@@ -502,6 +515,16 @@ export default function MyOrders({ token, setActiveTab }) {
                                         Mobile: <strong className="text-gray-800">{selectedOrder.deliveryAddress?.mobile || selectedOrder.customer?.phone}</strong>
                                         {selectedOrder.deliveryAddress?.alternatePhone && ` | Alt: ${selectedOrder.deliveryAddress.alternatePhone}`}
                                     </p>
+                                    {selectedOrder.deliveryAddress?.location?.latitude !== null && selectedOrder.deliveryAddress?.location?.latitude !== undefined && (
+                                        <a
+                                            href={selectedOrder.deliveryAddress.location.mapUrl || `https://www.google.com/maps?q=${selectedOrder.deliveryAddress.location.latitude},${selectedOrder.deliveryAddress.location.longitude}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#1d5e4b] bg-[#eef5f2] px-2.5 py-1 rounded-lg border border-[#d2e4dc] hover:underline"
+                                        >
+                                            📍 Live Location Pin ({selectedOrder.deliveryAddress.location.latitude}, {selectedOrder.deliveryAddress.location.longitude}) ↗
+                                        </a>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="p-4 rounded-2xl bg-gray-50/60 border border-gray-100 text-xs text-gray-500">
@@ -579,12 +602,24 @@ export default function MyOrders({ token, setActiveTab }) {
                         )}
 
                         {/* Modal Action Buttons */}
-                        <div className="flex gap-3">
+                        <div className="flex flex-wrap gap-3">
                             <button
                                 onClick={() => setSelectedOrder(null)}
                                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs transition"
                             >
                                 Close
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => downloadOrderInvoice(selectedOrder)}
+                                className="inline-flex items-center justify-center gap-1.5 bg-[#1d5e4b] hover:bg-[#174c3c] text-white font-bold px-5 py-2.5 rounded-xl text-xs transition shadow-sm"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                <span>Download Invoice</span>
                             </button>
                             {((selectedOrder.orderStatus || "Placed") === "Placed" || selectedOrder.orderStatus === "Confirmed") && (
                                 <button

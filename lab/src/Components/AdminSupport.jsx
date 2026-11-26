@@ -322,6 +322,11 @@ export default function AdminSupport({ token, onStatsChange }) {
                                         <span className="text-[11px] font-bold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-md border border-indigo-100">
                                             {ticket.category}
                                         </span>
+                                        {ticket.source === "contact" && (
+                                            <span className="text-[11px] font-bold bg-[#f6f1ea] text-[#a05f2c] px-2.5 py-0.5 rounded-md border border-[#e5dacb]">
+                                                Contact Form
+                                            </span>
+                                        )}
                                         {ticket.orderId && (
                                             <span className="text-[11px] font-mono font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md">
                                                 Order: {ticket.orderId}

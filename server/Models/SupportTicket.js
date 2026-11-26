@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
 
 const supportTicketSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false, index: true },
     userEmail: { type: String, required: true },
     userName: { type: String, default: "Student" },
+    source: { type: String, enum: ["support", "contact"], default: "support" },
     subject: { type: String, required: true, trim: true },
     category: {
         type: String,
